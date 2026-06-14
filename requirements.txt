@@ -1,0 +1,9 @@
+httpx
+pdfplumber
+pytesseract
+Pillow
+python-docx
+docx2pdf
+msal
+python-dotenv
+customtkinter

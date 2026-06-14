@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F2F0EB; --surface: #FFFFFF; --surface2: #F7F6F2; --border: #E4E1D8;
+    --text-primary: #1A1916; --text-secondary: #6B6860; --text-muted: #A8A49C;
+    --teal: #0F7B6C; --teal-light: #E6F4F1; --teal-mid: #B8DDD8;
+    --amber: #C4770A; --amber-light: #FEF3E2;
+    --sent-bg: #F7F6F2; --sent-text: #B0ADA6;
+    --radius: 10px; --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text-primary); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  .screen { display: none; flex-direction: column; height: 100vh; animation: fadeIn 0.18s ease; }
+  .screen.active { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+  .titlebar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; height: 52px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .titlebar-left { display: flex; align-items: center; gap: 10px; }
+  .app-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); }
+  .app-name { font-size: 13px; font-weight: 600; }
+  .app-sub { font-size: 12px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
+  .breadcrumb span.active { color: var(--text-primary); font-weight: 500; }
+  .bc-link { cursor: pointer; }
+  .bc-link:hover { color: var(--teal); }
+  .main { flex: 1; overflow-y: auto; padding: 24px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .card-title { font-size: 13px; font-weight: 600; }
+  .card-body { padding: 20px; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+  .toolbar-left { display: flex; align-items: center; gap: 10px; }
+  .page-title { font-size: 20px; font-weight: 600; }
+  .badge { background: var(--teal); color: white; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; font-family: 'DM Mono', monospace; }
+  .badge.amber { background: var(--amber); }
+  .day-control { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 12px; font-size: 12px; color: var(--text-secondary); }
+  .day-control input { width: 36px; border: none; outline: none; font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; text-align: center; background: transparent; }
+  .worklist-table { width: 100%; border-collapse: collapse; }
+  .worklist-table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .worklist-row { border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.12s; }
+  .worklist-row:last-child { border-bottom: none; }
+  .worklist-row:hover:not(.sent) { background: var(--teal-light); }
+  .worklist-row.sent:hover { background: #EEECEA; }
+  .worklist-row.sent { cursor: default; background: var(--sent-bg); }
+  .worklist-row td { padding: 14px 16px; vertical-align: middle; font-size: 13px; }
+  .worklist-row.sent td { color: var(--sent-text); }
+  .status-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
+  .status-badge.pending { background: var(--amber-light); color: var(--amber); border: 1px solid #F0D0A0; }
+  .status-badge.sent-label { background: var(--sent-bg); color: var(--sent-text); border: 1px solid var(--border); }
+  .patient-name { font-weight: 500; }
+  .file-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-family: 'DM Mono', monospace; background: var(--surface2); border: 1px solid var(--border); color: var(--text-secondary); padding: 3px 8px; border-radius: 4px; }
+  .file-tag.epc { background: var(--teal-light); border-color: var(--teal-mid); color: var(--teal); }
+  .file-tag.dva { background: var(--amber-light); border-color: #F5D7A3; color: var(--amber); }
+  .file-tag.wc { background: #EEF0F8; border-color: #C5CAE9; color: #3949AB; }
+  .appt-date { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--text-secondary); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.12s; }
+  .btn-primary { background: var(--teal); color: white; }
+  .btn-primary:hover { background: #0A6357; }
+  .btn-secondary { background: var(--surface); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--surface2); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid transparent; }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text-primary); }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-copy { background: var(--surface2); border: 1px solid var(--border); color: var(--text-secondary); padding: 5px 10px; font-size: 12px; border-radius: 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.12s; }
+  .btn-copy:hover { background: var(--teal-light); border-color: var(--teal-mid); color: var(--teal); }
+  .btn-copy.copied { background: var(--teal-light); border-color: var(--teal-mid); color: var(--teal); }
+  .steps { display: flex; align-items: center; padding: 0 20px; background: var(--surface); border-bottom: 1px solid var(--border); height: 40px; flex-shrink: 0; gap: 4px; }
+  .step { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; color: var(--text-muted); padding-right: 8px; }
+  .step:not(:last-child)::after { content: '›'; margin-left: 8px; color: var(--border); }
+  .step.active { color: var(--teal); }
+  .step-num { width: 18px; height: 18px; border-radius: 50%; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; background: var(--border); color: var(--text-muted); }
+  .step.active .step-num { background: var(--teal); color: white; }
+  .step.done .step-num { background: var(--teal-light); color: var(--teal); }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 5px; display: block; }
+  .form-input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text-primary); background: var(--surface); outline: none; transition: border-color 0.12s; }
+  .form-input:focus { border-color: var(--teal); }
+  .form-select { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text-primary); background: var(--surface); outline: none; cursor: pointer; }
+  .rec-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; color: var(--amber); background: var(--amber-light); border: 1px solid #F5D7A3; padding: 2px 6px; border-radius: 4px; margin-left: 8px; }
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .proda-field { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 16px; }
+  .proda-field:last-child { border-bottom: none; }
+  .proda-field-left { flex: 1; }
+  .proda-field-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 3px; }
+  .proda-field-value { font-size: 13px; font-weight: 500; font-family: 'DM Mono', monospace; color: var(--text-primary); }
+  .proda-source { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+  .success-banner { background: var(--teal-light); border: 1px solid var(--teal-mid); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: 13px; color: var(--teal); font-weight: 500; }
+  .error-banner { background: #FEF2F2; border: 1px solid #FECACA; border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #DC2626; }
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(20,18,14,0.55); backdrop-filter: blur(3px); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; animation: fadeIn 0.15s ease; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 20px 60px rgba(0,0,0,0.18); width: 640px; max-width: 96vw; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .modal-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .modal-close { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface2); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); transition: all 0.12s; }
+  .modal-close:hover { background: var(--border); color: var(--text-primary); }
+  .modal-body { flex: 1; overflow-y: auto; padding: 0; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; flex-shrink: 0; background: var(--surface2); }
+  .flex-row { display: flex; align-items: center; gap: 10px; }
+  .flex-between { display: flex; align-items: center; justify-content: space-between; }
+  .placeholder-tag { display: inline-flex; align-items: center; font-size: 11px; font-family: 'DM Mono', monospace; font-weight: 500; color: var(--teal); background: var(--teal-light); border: 1px solid var(--teal-mid); padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all 0.12s; }
+  .placeholder-tag:hover { background: var(--teal-mid); }
+  .etab { padding:9px 16px;font-size:12px;font-weight:500;color:var(--text-muted);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all 0.12s; }
+  .etab:hover { color:var(--text-primary); }
+  .etab.active { color:var(--teal);border-bottom-color:var(--teal);font-weight:600; }
+  .spinner { width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--teal);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .skeleton { background: linear-gradient(90deg,var(--surface2) 25%,var(--border) 50%,var(--surface2) 75%); background-size:200% 100%; animation:shimmer 1.2s infinite; border-radius:4px; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .nav-tabs { display: flex; }
+  .nav-tab { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border); padding: 5px 14px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.12s; }
+  .nav-tab:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .nav-tab:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .nav-tab:not(:first-child) { border-left: none; }
+  .nav-tab.active { background: var(--teal-light); color: var(--teal); border-color: var(--teal-mid); font-weight: 600; }
+  .nav-tab:not(.active):hover { background: var(--surface2); }
+  /* Split layout */
+  .split-layout { flex:1; display:flex; overflow:hidden; min-height:0; }
+  .split-left { flex:1; overflow-y:auto; padding:20px; min-width:0; }
+  .split-right { width:420px; flex-shrink:0; border-left:1px solid var(--border); background:var(--surface2); overflow-y:auto; display:none; }
+  .split-right.open { display:block; }
+  .split-right-header { position:sticky; top:0; z-index:10; background:var(--surface); border-bottom:1px solid var(--border); padding:10px 16px; display:flex; align-items:center; justify-content:space-between; }
+  /* Outlook modal */
+  .outlook-chrome { background:#0F3D6E; border-radius: var(--radius) var(--radius) 0 0; flex-shrink:0; }
+  .outlook-toolbar { background:#0A3260; padding:6px 16px; display:flex; gap:6px; align-items:center; }
+  /* Settings template table */
+  .tmpl-grid { display:grid; grid-template-columns:2fr 1.5fr 1.5fr; }
+  .tmpl-cell { padding:14px 16px; display:flex; align-items:center; gap:8px; }
+  .tmpl-cell + .tmpl-cell { border-left:1px solid var(--border); }
+  /* Disabled */
+  .btn:disabled, button:disabled { opacity:0.5; cursor:not-allowed; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 1: WORKLIST                                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="s1" class="screen active">
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <div class="app-dot"></div>
+      <span class="app-name">Cliniko Assistant</span>
+      <span class="app-sub">Motion Ease Physiotherapy</span>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="goTo('s1')">☰ Worklist</button>
+      <button class="nav-tab" onclick="goTo('s_patients')">Patients &amp; PRODA</button>
+      <button class="nav-tab" onclick="goTo('s_how')">How This App Works</button>
+      <button class="nav-tab" onclick="goTo('s7')">⚙ Settings</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="page-title">Worklist</span>
+        <span class="badge" id="wl-count-badge">—</span>
+      </div>
+      <div class="flex-row">
+        <span id="last-run-label" style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;"></span>
+        <div class="day-control">
+          <span>Last</span>
+          <input type="number" id="scan-days" value="7" min="1" max="90"/>
+          <span>days</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="refreshWorklist()">↻ Refresh</button>
+      </div>
+    </div>
+
+    <div id="wl-status" style="font-size:12px;color:var(--text-muted);margin-bottom:8px;min-height:18px;"></div>
+
+    <div class="card">
+      <table class="worklist-table">
+        <thead>
+          <tr>
+            <th style="width:130px">Status</th>
+            <th>Patient</th>
+            <th>File</th>
+            <th style="width:130px">File Uploaded</th>
+            <th style="width:90px"></th>
+          </tr>
+        </thead>
+        <tbody id="wl-tbody">
+          <tr><td colspan="5" style="padding:32px 16px;text-align:center;">
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text-muted);font-size:13px;">
+              <span class="spinner"></span> Scanning Cliniko...
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 2: FILE SELECTION                                        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="s2" class="screen">
+  <div class="titlebar">
+    <div class="titlebar-left"><div class="app-dot"></div><span class="app-name">Cliniko Assistant</span></div>
+    <div class="breadcrumb">
+      <span class="bc-link" onclick="goTo('s1')">Worklist</span>
+      <span>›</span><span class="active" id="s2-patient-bc">Patient</span>
+    </div>
+  </div>
+  <div class="steps">
+    <div class="step active"><div class="step-num">1</div> Select File</div>
+    <div class="step"><div class="step-num">2</div> Review Fields</div>
+    <div class="step"><div class="step-num">3</div> Preview</div>
+    <div class="step"><div class="step-num">4</div> Send</div>
+    <div class="step"><div class="step-num">5</div> PRODA</div>
+  </div>
+  <div class="main">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button class="btn btn-ghost btn-sm" onclick="goTo('s1')">← Back</button>
+        <span class="page-title" id="s2-patient-name"></span>
+      </div>
+    </div>
+    <div class="card" style="max-width:560px">
+      <div class="card-header">
+        <span class="card-title">Select PDF to process</span>
+        <span id="s2-file-count" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Attachment</label>
+          <select class="form-select" id="s2-file-select" onchange="onFileChange()"></select>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:6px;">
+            <span class="rec-tag" id="s2-rec-tag" style="display:none">⭐ Recommended</span>
+            <span id="s2-rec-hint" style="font-size:11px;color:var(--text-muted)"></span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Workflow</label>
+          <select class="form-select" id="s2-workflow-select" onchange="onWorkflowChange()">
+            <option value="epc_new">1 — EPC · New Patient</option>
+            <option value="epc_final">2 — EPC · Final Consult</option>
+            <option value="dva_new">3 — DVA · New Patient</option>
+            <option value="dva_final">4 — DVA · Final Consult</option>
+            <option value="wc_new">5 — Workcover · New Patient</option>
+            <option value="wc_final_form032">6 — Workcover · Final Consult ★ 2 templates</option>
+          </select>
+          <div style="margin-top:7px;display:flex;align-items:center;gap:6px;">
+            <span class="rec-tag">⭐ Auto-detected</span>
+            <span id="s2-wf-hint" style="font-size:11px;color:var(--text-muted)"></span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="flex-between">
+          <button class="btn btn-secondary btn-sm" onclick="previewSourcePdf()">Preview Source PDF ↗</button>
+          <button class="btn btn-primary" id="s2-extract-btn" onclick="extractPdf()">Read &amp; Extract →</button>
+        </div>
+        <div id="s2-status" style="font-size:12px;color:var(--text-muted);margin-top:8px;min-height:18px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 3: REVIEW FIELDS                                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="s3" class="screen">
+  <div class="titlebar">
+    <div class="titlebar-left"><div class="app-dot"></div><span class="app-name">Cliniko Assistant</span></div>
+    <div class="flex-row" style="gap:16px;">
+      <div class="breadcrumb">
+        <span class="bc-link" onclick="goTo('s1')">Worklist</span><span>›</span>
+        <span class="bc-link" onclick="goTo('s2')" id="s3-patient-bc"></span><span>›</span>
+        <span class="active">Review Fields</span>
+      </div>
+      <button onclick="openProdaModal()" style="background:var(--teal);color:white;border:none;border-radius:20px;padding:5px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:5px;">📋 PRODA</button>
+    </div>
+  </div>
+  <div class="steps">
+    <div class="step done"><div class="step-num">✓</div> Select File</div>
+    <div class="step active"><div class="step-num">2</div> Review Fields</div>
+    <div class="step"><div class="step-num">3</div> Preview</div>
+    <div class="step"><div class="step-num">4</div> Send</div>
+    <div class="step"><div class="step-num">5</div> PRODA</div>
+  </div>
+  <div class="split-layout">
+    <div class="split-left">
+      <div class="toolbar" style="margin-bottom:14px;">
+        <div class="toolbar-left">
+          <button class="btn btn-ghost btn-sm" onclick="goTo('s2')">← Back</button>
+          <span class="page-title" style="font-size:17px;">Review Extracted Fields</span>
+        </div>
+        <button id="toggle-source-btn" class="btn btn-secondary btn-sm" onclick="toggleSourcePanel()">Show Source PDF ↗</button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title" id="s3-card-title">Extracted fields</span>
+          <span id="s3-field-count" style="font-size:12px;color:var(--teal);font-weight:500"></span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-primary);margin-bottom:12px;">Patient Details</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="form-group" style="margin:0"><label class="form-label">Patient Full Name</label><input class="form-input" id="f-patient_name"/></div>
+            <div class="form-group" style="margin:0"><label class="form-label">Date of Birth</label><input class="form-input" id="f-patient_dob"/></div>
+            <div class="form-group" style="margin:0"><label class="form-label">Medicare Number</label><input class="form-input" id="f-medicare_number"/></div>
+            <div class="form-group" style="margin:0"><label class="form-label">Individual Reference No. (IRN)</label><input class="form-input" id="f-irn"/></div>
+            <div class="form-group" style="margin:0"><label class="form-label">Condition / Diagnosis</label><input class="form-input" id="f-condition"/></div>
+            <div class="form-group" style="margin:0"><label class="form-label">Referral Date</label><input class="form-input" id="f-referral_date"/></div>
+          </div>
+          <div class="divider"></div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-primary);margin-bottom:12px;">Doctor Details</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="form-group" style="margin:0"><label class="form-label">Doctor's Name</label><input class="form-input" id="f-doctor_name"/></div>
+            <div class="form-group" style="margin:0"><label class="form-label">Doctor's Provider No.</label><input class="form-input" id="f-doctor_provider_no"/></div>
+            <div class="form-group" style="margin:0"><label class="form-label">Doctor's Email</label><input class="form-input" id="f-doctor_email"/></div>
+          </div>
+          <div class="divider"></div>
+          <div class="flex-between">
+            <span style="font-size:12px;color:var(--text-muted)">Edit any field above before generating</span>
+            <button class="btn btn-primary" id="s3-gen-btn" onclick="generateDocument()">Generate Document →</button>
+          </div>
+          <div id="s3-status" style="font-size:12px;color:var(--text-muted);margin-top:8px;min-height:18px;"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Source PDF panel -->
+    <div class="split-right" id="source-pdf-panel">
+      <div class="split-right-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:13px;font-weight:600;">📄 Source PDF</span>
+          <span id="source-pdf-filename" style="font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;"></span>
+        </div>
+        <button class="modal-close" onclick="toggleSourcePanel()">✕</button>
+      </div>
+      <div style="padding:20px;font-size:13px;color:var(--text-muted);text-align:center;margin-top:40px;">
+        Source PDF preview opens in macOS Preview.<br>Click "Preview Source PDF ↗" on the previous screen.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 4: PREVIEW & APPROVE                                     -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="s4" class="screen">
+  <div class="titlebar">
+    <div class="titlebar-left"><div class="app-dot"></div><span class="app-name">Cliniko Assistant</span></div>
+    <div class="flex-row" style="gap:16px;">
+      <div class="breadcrumb">
+        <span class="bc-link" onclick="goTo('s1')">Worklist</span><span>›</span>
+        <span class="bc-link" onclick="goTo('s2')" id="s4-patient-bc"></span><span>›</span>
+        <span class="active">Preview</span>
+      </div>
+      <button onclick="openProdaModal()" style="background:var(--teal);color:white;border:none;border-radius:20px;padding:5px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">📋 PRODA</button>
+    </div>
+  </div>
+  <div class="steps">
+    <div class="step done"><div class="step-num">✓</div> Select File</div>
+    <div class="step done"><div class="step-num">✓</div> Review Fields</div>
+    <div class="step active"><div class="step-num">3</div> Preview</div>
+    <div class="step"><div class="step-num">4</div> Send</div>
+    <div class="step"><div class="step-num">5</div> PRODA</div>
+  </div>
+  <div class="main">
+    <div class="toolbar" style="margin-bottom:14px;">
+      <div class="toolbar-left">
+        <button class="btn btn-ghost btn-sm" onclick="goTo('s3')">← Back</button>
+        <span class="page-title" style="font-size:17px;">Preview Document</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="flex-between">
+          <div class="flex-row">
+            <span style="font-size:22px;">📄</span>
+            <div>
+              <div id="s4-filename" style="font-size:13px;font-weight:600;"></div>
+              <div style="font-size:11px;color:var(--teal);font-weight:500;margin-top:1px;">✓ Generated successfully from template</div>
+            </div>
+          </div>
+          <div class="flex-row">
+            <button class="btn btn-secondary btn-sm" onclick="openGeneratedPdf()">Open in Preview ↗</button>
+            <button class="btn btn-ghost btn-sm" onclick="goTo('s3')">← Edit fields</button>
+            <button class="btn btn-primary" onclick="goTo('s5')">Approve &amp; Continue →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 5: EMAIL & SEND                                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="s5" class="screen">
+  <div class="titlebar">
+    <div class="titlebar-left"><div class="app-dot"></div><span class="app-name">Cliniko Assistant</span></div>
+    <div class="flex-row" style="gap:16px;">
+      <div class="breadcrumb">
+        <span class="bc-link" onclick="goTo('s1')">Worklist</span><span>›</span>
+        <span class="bc-link" onclick="goTo('s2')" id="s5-patient-bc"></span><span>›</span>
+        <span class="active">Send</span>
+      </div>
+      <button onclick="openProdaModal()" style="background:var(--teal);color:white;border:none;border-radius:20px;padding:5px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">📋 PRODA</button>
+    </div>
+  </div>
+  <div class="steps">
+    <div class="step done"><div class="step-num">✓</div> Select File</div>
+    <div class="step done"><div class="step-num">✓</div> Review Fields</div>
+    <div class="step done"><div class="step-num">✓</div> Preview</div>
+    <div class="step active"><div class="step-num">4</div> Send</div>
+    <div class="step"><div class="step-num">5</div> PRODA</div>
+  </div>
+  <div class="main">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button class="btn btn-ghost btn-sm" onclick="goTo('s4')">← Back</button>
+        <span class="page-title">Send to Doctor</span>
+      </div>
+    </div>
+    <div class="card" style="max-width:520px">
+      <div class="card-header"><span class="card-title">Email details</span></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Recipient</label>
+          <input class="form-input" id="s5-to" placeholder="doctor@practice.com.au"/>
+          <div style="margin-top:5px;font-size:11px;color:var(--text-muted)">Pre-filled from extracted fields — edit if needed</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Attachment</label>
+          <div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);">
+            <span>📄</span>
+            <span id="s5-pdf-name" style="font-size:13px;font-weight:500"></span>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="flex-between">
+          <span style="font-size:12px;color:var(--text-muted)">Sent via Microsoft Graph / Outlook</span>
+          <button class="btn btn-primary" onclick="openOutlookPreview()">Review &amp; Send →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCREEN 6: PRODA PANEL                                           -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="s6" class="screen">
+  <div class="titlebar">
+    <div class="titlebar-left"><div class="app-dot"></div><span class="app-name">Cliniko Assistant</span></div>
+    <div class="breadcrumb">
+      <span class="bc-link" onclick="goTo('s1')">Worklist</span><span>›</span>
+      <span class="active" id="s6-bc">PRODA</span>
+    </div>
+  </div>
+  <div class="steps">
+    <div class="step done"><div class="step-num">✓</div> Select File</div>
+    <div class="step done"><div class="step-num">✓</div> Review Fields</div>
+    <div class="step done"><div class="step-num">✓</div> Preview</div>
+    <div class="step done"><div class="step-num">✓</div> Send</div>
+    <div class="step active"><div class="step-num">5</div> PRODA</div>
+  </div>
+  <div class="main">
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="page-title">PRODA Entry</span>
+        <span class="badge amber">Manual entry required</span>
+      </div>
+    </div>
+    <div class="success-banner" id="s6-success-banner">✓ Email sent — copy the fields below into PRODA</div>
+    <div class="card" style="max-width:580px">
+      <div class="card-header">
+        <span class="card-title">Copy fields into PRODA portal</span>
+        <span style="font-size:11px;color:var(--text-muted)">Click 📋 to copy each field</span>
+      </div>
+      <div id="s6-proda-fields"></div>
+      <div style="padding:16px 20px;border-top:1px solid var(--border)">
+        <div class="flex-between">
+          <span id="s6-sent-label" style="font-size:12px;color:var(--text-muted)"></span>
+          <button class="btn btn-primary" onclick="backToWorklist()">← Back to Worklist</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCREEN: PATIENTS & PRODA                                        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="s_patients" class="screen">
+  <div class="titlebar">
+    <div class="titlebar-left"><div class="app-dot"></div><span class="app-name">Cliniko Assistant</span><span class="app-sub">Motion Ease Physiotherapy</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab" onclick="goTo('s1')">☰ Worklist</button>
+      <button class="nav-tab active" onclick="goTo('s_patients')">Patients &amp; PRODA</button>
+      <button class="nav-tab" onclick="goTo('s_how')">How This App Works</button>
+      <button class="nav-tab" onclick="goTo('s7')">⚙ Settings</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="flex-row" style="margin-bottom:16px;">
+      <span class="page-title">Patients &amp; PRODA</span>
+      <span class="badge" id="patients-count-badge">0 patients</span>
+    </div>
+    <div style="position:relative;margin-bottom:16px;max-width:420px;">
+      <input id="patient-search" class="form-input" placeholder="Search by name, Medicare number..." oninput="filterPatients()" style="padding-left:36px;"/>
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;color:var(--text-muted);">🔍</span>
+    </div>
+    <div class="card">
+      <table class="worklist-table" id="patients-table">
+        <thead>
+          <tr>
+            <th>Patient</th><th>Medicare No.</th><th>IRN</th><th>DOB</th>
+            <th>Last Workflow</th><th>Last Actioned</th><th style="width:80px"></th>
+          </tr>
+        </thead>
+        <tbody id="patients-tbody"></tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;font-size:12px;color:var(--text-muted);">Click any row or the 📋 PRODA button to copy fields into the PRODA portal.</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCREEN: HOW THIS APP WORKS                                      -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="s_how" class="screen">
+  <div class="titlebar">
+    <div class="titlebar-left"><div class="app-dot"></div><span class="app-name">Cliniko Assistant</span><span class="app-sub">Motion Ease Physiotherapy</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab" onclick="goTo('s1')">☰ Worklist</button>
+      <button class="nav-tab" onclick="goTo('s_patients')">Patients &amp; PRODA</button>
+      <button class="nav-tab active" onclick="goTo('s_how')">How This App Works</button>
+      <button class="nav-tab" onclick="goTo('s7')">⚙ Settings</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="flex-row" style="margin-bottom:20px;">
+      <button class="btn btn-ghost btn-sm" onclick="goTo('s1')">← Back</button>
+      <span class="page-title">How This App Works</span>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><span class="card-title">The big picture</span></div>
+      <div class="card-body" style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+        <p style="margin-bottom:12px;">Cliniko Assistant does the admin work that used to take you a long time to do manually. It connects to your Cliniko account, finds the patients you need to action, reads the relevant documents, fills out your Word templates automatically, and handles the emails — so you can focus on patients instead of paperwork.</p>
+        <p>Think of it as a smart assistant that knows which patients need follow-up letters sent and walks you through each one step by step.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><span class="card-title">What happens each time you open the app</span></div>
+      <div class="card-body" style="padding:0;">
+        <div id="how-steps"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><span class="card-title">Good to know</span></div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;gap:12px;align-items:flex-start;"><span style="font-size:16px;flex-shrink:0;">🔒</span><div><div style="font-size:13px;font-weight:600;margin-bottom:2px;">Patient files are never saved to your computer</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">The app reads PDFs directly from Cliniko without downloading them. Your patient data stays in Cliniko where it belongs.</div></div></div>
+        <div style="display:flex;gap:12px;align-items:flex-start;"><span style="font-size:16px;flex-shrink:0;">🕐</span><div><div style="font-size:13px;font-weight:600;margin-bottom:2px;">The app remembers what you've already done</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">Patients you've actioned stay greyed out in the worklist even if you close and reopen the app.</div></div></div>
+        <div style="display:flex;gap:12px;align-items:flex-start;"><span style="font-size:16px;flex-shrink:0;">📝</span><div><div style="font-size:13px;font-weight:600;margin-bottom:2px;">You're always in control</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">The app makes suggestions — recommended files, auto-detected workflow types, pre-filled fields — but you can change anything before anything gets sent.</div></div></div>
+        <div style="display:flex;gap:12px;align-items:flex-start;"><span style="font-size:16px;flex-shrink:0;">⚙️</span><div><div style="font-size:13px;font-weight:600;margin-bottom:2px;">Templates and settings are easy to update</div><div style="font-size:12px;color:var(--text-secondary);line-height:1.6;">If your Word templates change, just go to Settings and upload the new version.</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCREEN: SETTINGS                                                -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="s7" class="screen">
+  <div class="titlebar">
+    <div class="titlebar-left"><div class="app-dot"></div><span class="app-name">Cliniko Assistant</span><span class="app-sub">Motion Ease Physiotherapy</span></div>
+    <div class="nav-tabs">
+      <button class="nav-tab" onclick="goTo('s1')">☰ Worklist</button>
+      <button class="nav-tab" onclick="goTo('s_patients')">Patients &amp; PRODA</button>
+      <button class="nav-tab" onclick="goTo('s_how')">How This App Works</button>
+      <button class="nav-tab active" onclick="goTo('s7')">⚙ Settings</button>
+    </div>
+  </div>
+  <div class="main">
+    <div class="flex-row" style="justify-content:space-between;margin-bottom:16px;">
+      <span class="page-title">Settings</span>
+      <span id="settings-saved-badge" style="display:none;font-size:11px;font-weight:600;color:var(--teal);background:var(--teal-light);border:1px solid var(--teal-mid);padding:3px 10px;border-radius:20px;">✓ Saved</span>
+    </div>
+
+    <!-- Workflow templates -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Workflow Templates</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Each workflow has its own Word template and email template.</div>
+        </div>
+      </div>
+      <div class="tmpl-grid" style="border-bottom:1px solid var(--border);background:var(--surface2);">
+        <div style="padding:8px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);">Workflow</div>
+        <div style="padding:8px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);border-left:1px solid var(--border);">.docx Template</div>
+        <div style="padding:8px 16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);border-left:1px solid var(--border);">Email Template</div>
+      </div>
+      <div id="tmpl-rows"></div>
+    </div>
+
+    <!-- Scan settings -->
+    <div class="card" style="margin-bottom:24px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Scan Settings</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Configure how the worklist scan works.</div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="form-group">
+            <label class="form-label">Default Day Range</label>
+            <input class="form-input" id="cfg-days" type="number" min="1" max="90"/>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Days to scan back on launch</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Worklist Keywords</label>
+            <input class="form-input" id="cfg-wl-keywords"/>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Comma-separated filename keywords</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Recommended File Keywords</label>
+            <input class="form-input" id="cfg-pref-keywords"/>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Used to auto-select the best file</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="flex-between">
+          <span style="font-size:12px;color:var(--text-muted)">Requires app restart to take effect</span>
+          <button class="btn btn-primary" onclick="saveScanSettings()">Save Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL: OUTLOOK COMPOSE                                          -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="outlookModal" class="modal-overlay" onclick="closeOutlookModal(event)">
+  <div class="modal" style="width:680px;">
+    <div class="outlook-chrome">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:20px;height:20px;background:white;border-radius:3px;display:flex;align-items:center;justify-content:center;"><span style="font-size:13px;font-weight:800;color:#0F3D6E;line-height:1;">O</span></div>
+          <span style="font-size:13px;font-weight:600;color:white;">New Message — Outlook</span>
+        </div>
+        <button onclick="document.getElementById('outlookModal').classList.remove('open')" style="background:rgba(255,255,255,0.15);border:none;color:white;width:26px;height:26px;border-radius:4px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;">✕</button>
+      </div>
+      <div class="outlook-toolbar">
+        <button id="outlook-send-btn" onclick="confirmSend()" style="background:#0078D4;border:none;color:white;padding:5px 18px;border-radius:3px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Send</button>
+        <div style="width:1px;height:20px;background:rgba(255,255,255,0.2);margin:0 4px;"></div>
+        <span style="font-size:12px;color:rgba(255,255,255,0.6);">Discard</span>
+      </div>
+    </div>
+    <div class="modal-body" style="background:white;">
+      <div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid #E8E8E8;">
+        <span style="font-size:12px;color:#666;width:50px;flex-shrink:0;">To</span>
+        <span id="outlook-to" style="font-size:12px;color:#0F7B6C;background:#E6F4F1;border:1px solid #B8DDD8;border-radius:12px;padding:3px 10px;font-weight:500;"></span>
+      </div>
+      <div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid #E8E8E8;">
+        <span style="font-size:12px;color:#666;width:50px;flex-shrink:0;">Subject</span>
+        <span id="outlook-subject" style="font-size:13px;font-weight:600;color:#1a1916;"></span>
+      </div>
+      <div style="padding:10px 16px;border-bottom:1px solid #E8E8E8;">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:#F3F3F3;border:1px solid #E0E0E0;border-radius:6px;padding:8px 12px;">
+          <div style="width:32px;height:32px;background:#C0392B;border-radius:4px;display:flex;align-items:center;justify-content:center;"><span style="font-size:10px;font-weight:700;color:white;">PDF</span></div>
+          <div>
+            <div id="outlook-att-name" style="font-size:12px;font-weight:600;color:#1a1916;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px;min-height:160px;font-size:13px;color:#1a1916;line-height:1.7;" id="outlook-body"></div>
+      <div id="outlook-sending" style="display:none;padding:16px 20px;background:white;border-top:1px solid #E8E8E8;text-align:center;">
+        <div style="font-size:13px;color:#0F7B6C;font-weight:500;">✓ Email sent successfully</div>
+        <div id="outlook-sent-to" style="font-size:12px;color:#888;margin-top:4px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer" style="background:#F9F9F9;border-top:1px solid #E8E8E8;justify-content:space-between;width:100%;">
+      <span style="font-size:11px;color:#999;">Review the email above then click Send, or close to go back</span>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('outlookModal').classList.remove('open')">← Go Back</button>
+        <button id="confirm-send-btn" class="btn btn-primary btn-sm" onclick="confirmSend()">Send Now →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL: PRODA QUICK ACCESS                                       -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="prodaModal" class="modal-overlay" onclick="closeProdaModal(event)">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:13px;font-weight:600;" id="proda-modal-title">📋 PRODA Fields</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Copy each field into the PRODA portal</div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('prodaModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" id="proda-modal-fields"></div>
+    <div class="modal-footer"><button class="btn btn-primary btn-sm" onclick="document.getElementById('prodaModal').classList.remove('open')">Done</button></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- MODAL: EMAIL TEMPLATE EDITOR                                    -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="emailEditorModal" class="modal-overlay" onclick="closeEmailEditor(event)">
+  <div class="modal" style="width:600px;">
+    <div class="modal-header">
+      <div>
+        <div style="font-size:13px;font-weight:600;" id="ee-title">Edit Email Template</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Changes apply to all future sends for this workflow</div>
+      </div>
+      <button class="modal-close" onclick="document.getElementById('emailEditorModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="modal-body" style="padding:20px;">
+      <div class="form-group"><label class="form-label">Subject Line</label><input id="ee-subject" class="form-input"/></div>
+      <div class="form-group"><label class="form-label">Email Body</label><textarea id="ee-body" class="form-input" rows="8" style="resize:vertical;font-family:'DM Sans',sans-serif;line-height:1.6;"></textarea></div>
+      <div class="form-group" style="margin-bottom:0;"><label class="form-label">CC (optional)</label><input id="ee-cc" class="form-input" placeholder="e.g. admin@noosaalliedhealth.com.au"/></div>
+      <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+        <span style="font-size:10px;font-weight:600;color:var(--text-muted);margin-right:2px;">PLACEHOLDERS:</span>
+        <span class="placeholder-tag" onclick="insertEE('{{patient_name}}')">{{patient_name}}</span>
+        <span class="placeholder-tag" onclick="insertEE('{{patient_dob}}')">{{patient_dob}}</span>
+        <span class="placeholder-tag" onclick="insertEE('{{medicare_number}}')">{{medicare_number}}</span>
+        <span class="placeholder-tag" onclick="insertEE('{{condition}}')">{{condition}}</span>
+        <span class="placeholder-tag" onclick="insertEE('{{doctor_name}}')">{{doctor_name}}</span>
+        <span class="placeholder-tag" onclick="insertEE('{{sender_name}}')">{{sender_name}}</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="flex-row">
+        <button class="btn btn-secondary btn-sm" onclick="document.getElementById('emailEditorModal').classList.remove('open')">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveEmailTemplate()">Save Template</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

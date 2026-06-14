@@ -1,0 +1,7 @@
+{
+  "epc_new": {
+    "subject": "EPC Referral \u2014 {{patient_name}} (DOB {{patient_dob}})",
+    "body": "Dear {{doctor_name}},\n\nPlease find attached an EPC referral for {{patient_name}} (DOB: {{patient_dob}}, Medicare: {{medicare_number}} \u2014 IRN {{irn}}).\n\nThe referral is for physiotherapy services under the Enhanced Primary Care program for {{condition}}.\n\nPlease do not hesitate to contact our practice if you have any questions.\n\nKind regards,\n{{sender_name}}",
+    "cc": ""
+  }
+}

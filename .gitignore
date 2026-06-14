@@ -1,0 +1,9 @@
+.env
+patients.db
+sent_log.json
+__pycache__/
+*.pyc
+*.pyo
+/tmp/
+.DS_Store
+*.pages
