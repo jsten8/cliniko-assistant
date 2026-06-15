@@ -425,14 +425,10 @@ function showProdaScreen(sentTo) {
 
 function buildProdaFields(fields) {
   const rows = [
-    { label: 'Patient Full Name', key: 'patient_name', source: 'Referral PDF' },
-    { label: 'Date of Birth', key: 'patient_dob', source: 'Referral PDF' },
     { label: 'Medicare Number', key: 'medicare_number', source: 'Referral PDF' },
-    { label: 'Individual Reference No. (IRN)', key: 'irn', source: 'Referral PDF' },
-    { label: 'Condition / Diagnosis', key: 'condition', source: 'Referral PDF' },
-    { label: 'Referral Date', key: 'referral_date', source: 'Referral PDF' },
-    { label: 'Doctor Name', key: 'doctor_name', source: 'Referral PDF' },
-    { label: 'Doctor Provider No.', key: 'doctor_provider_no', source: 'Referral PDF' },
+    { label: 'Individual Reference Number (IRN)', key: 'irn', source: 'Referral PDF' },
+    { label: 'First Name', key: 'patient_first_name', source: 'Cliniko record' },
+    { label: 'Date of Birth', key: 'patient_dob', source: 'Referral PDF' },
   ];
   return rows.map(r => {
     const val = fields[r.key] || '—';
