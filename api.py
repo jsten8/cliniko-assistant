@@ -119,7 +119,13 @@ class API:
             pdf_path = word_builder.convert_to_pdf(docx_path)
             _session["generated_pdf"] = str(pdf_path)
             _session["generated_docx"] = str(docx_path)
-            return {"ok": True, "pdf_path": str(pdf_path), "filename": pdf_path.name}
+            suffix = pdf_path.suffix.lower()
+            if suffix == ".pdf":
+                return {"ok": True, "pdf_path": str(pdf_path), "filename": pdf_path.name}
+            else:
+                # Conversion fell back to .docx
+                return {"ok": True, "pdf_path": str(pdf_path), "filename": pdf_path.name,
+                        "warning": "PDF conversion timed out — document saved as .docx instead. Click Open to view it in Word."}
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
