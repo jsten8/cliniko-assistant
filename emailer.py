@@ -1,22 +1,7 @@
-"""Sends email with PDF attachment via Microsoft Graph API."""
+"""Sends email via Outlook on macOS using AppleScript."""
 from __future__ import annotations
-import base64
+import subprocess
 from pathlib import Path
-import msal
-import httpx
-import config
-
-
-def _get_token() -> str:
-    app = msal.ConfidentialClientApplication(
-        config.MS_CLIENT_ID,
-        authority=f"https://login.microsoftonline.com/{config.MS_TENANT_ID}",
-        client_credential=config.MS_CLIENT_SECRET,
-    )
-    result = app.acquire_token_for_client(scopes=["https://graph.microsoft.com/.default"])
-    if "access_token" not in result:
-        raise RuntimeError(f"MSAL auth failed: {result.get('error_description', result)}")
-    return result["access_token"]
 
 
 def send_email(
@@ -26,34 +11,29 @@ def send_email(
     pdf_path: Path,
     cc: str | None = None,
 ) -> None:
-    token = _get_token()
-    pdf_bytes = pdf_path.read_bytes()
-    attachment = {
-        "@odata.type": "#microsoft.graph.fileAttachment",
-        "name": pdf_path.name,
-        "contentType": "application/pdf",
-        "contentBytes": base64.b64encode(pdf_bytes).decode(),
-    }
-    recipients = [{"emailAddress": {"address": to}}]
-    cc_recipients = [{"emailAddress": {"address": cc}}] if cc else []
+    """Compose and send an email in Outlook using AppleScript."""
+    safe_to = to.replace('"', '')
+    safe_subject = subject.replace('"', '').replace('\\', '')
+    safe_body = body.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+    safe_path = str(pdf_path).replace('"', '')
+    cc_line = f'make new to recipient at end of to recipients with properties {{address:"{safe_to}"}}'
+    cc_script = ""
+    if cc:
+        safe_cc = cc.replace('"', '')
+        cc_script = f'make new cc recipient at end of cc recipients with properties {{address:"{safe_cc}"}}'
 
-    payload = {
-        "message": {
-            "subject": subject,
-            "body": {"contentType": "HTML", "content": body.replace("\n", "<br>")},
-            "toRecipients": recipients,
-            "ccRecipients": cc_recipients,
-            "attachments": [attachment],
-        },
-        "saveToSentItems": True,
-    }
-
-    url = f"https://graph.microsoft.com/v1.0/users/{config.SENDER_EMAIL}/sendMail"
-    with httpx.Client(timeout=60) as client:
-        resp = client.post(
-            url,
-            json=payload,
-            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-        )
-        if resp.status_code not in (200, 202):
-            raise RuntimeError(f"Graph API error {resp.status_code}: {resp.text}")
+    script = f"""
+tell application "Microsoft Outlook"
+    activate
+    set newMsg to make new outgoing message with properties {{subject:"{safe_subject}", plain text content:"{safe_body}"}}
+    tell newMsg
+        {cc_line}
+        {cc_script}
+        make new attachment with properties {{file:POSIX file "{safe_path}"}}
+    end tell
+    open newMsg
+end tell
+"""
+    result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"Outlook compose failed: {result.stderr}")

@@ -139,6 +139,7 @@ class API:
 
     def render_email(self, workflow_key: str, fields: dict) -> dict:
         tmpl = email_templates.get(workflow_key)
+        fields = {**fields, "sender_name": "Mr Steven Girgis\nPhysiotherapist"}
         return {
             "subject": email_templates.render(tmpl["subject"], fields),
             "body": email_templates.render(tmpl["body"], fields),
@@ -150,12 +151,17 @@ class API:
             pdf_path = _session.get("generated_pdf")
             if not pdf_path:
                 return {"ok": False, "error": "No generated PDF found"}
+            fields = {**fields, "sender_name": "Mr Steven Girgis\nPhysiotherapist"}
             tmpl = email_templates.get(workflow_key)
             subject = email_templates.render(tmpl["subject"], fields)
             body = email_templates.render(tmpl["body"], fields)
             cc = tmpl.get("cc") or None
+            # Use the docx if no pdf was generated
+            doc_path = Path(pdf_path)
+            if not doc_path.exists():
+                doc_path = doc_path.with_suffix(".docx")
             emailer.send_email(to=to, subject=subject, body=body,
-                               pdf_path=Path(pdf_path), cc=cc)
+                               pdf_path=doc_path, cc=cc)
             return {"ok": True}
         except Exception as e:
             return {"ok": False, "error": str(e)}
