@@ -35,18 +35,31 @@ def _tuple(v: str) -> tuple:
     return tuple(int(x) for x in v.split("."))
 
 
+def _log(msg: str) -> None:
+    try:
+        log_path = APP_DIR / "update.log"
+        with open(log_path, "a") as f:
+            f.write(msg + "\n")
+    except Exception:
+        pass
+    print(msg)
+
+
 def check_and_update() -> bool:
     """Returns True if an update was applied (app should restart)."""
     try:
         import httpx
         local = _local_version()
+        _log(f"Auto-update check: local={local}")
         remote = _remote_version()
+        _log(f"Auto-update check: remote={remote}")
         if _tuple(remote) <= _tuple(local):
+            _log("Already up to date.")
             return False
 
-        print(f"Update available: {local} → {remote}. Downloading...")
+        _log(f"Update available: {local} → {remote}. Downloading...")
 
-        resp = httpx.get(REPO_ZIP, timeout=60, follow_redirects=True)
+        resp = httpx.get(REPO_ZIP, timeout=120, follow_redirects=True)
         z = zipfile.ZipFile(io.BytesIO(resp.content))
 
         # Extract to a temp dir, then copy files over
@@ -71,9 +84,9 @@ def check_and_update() -> bool:
                 shutil.copy2(src, dst)
 
         shutil.rmtree(tmp)
-        print(f"Updated to v{remote}. Restarting...")
+        _log(f"Updated to v{remote}. Restarting...")
         return True
 
     except Exception as e:
-        print(f"Auto-update failed (continuing anyway): {e}")
+        _log(f"Auto-update failed: {e}")
         return False

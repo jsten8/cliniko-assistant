@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # but restarts if update found before window opens)
     update_thread = threading.Thread(target=_auto_update, daemon=False)
     update_thread.start()
-    update_thread.join(timeout=8)  # Wait up to 8s for update check before launching
+    update_thread.join(timeout=30)  # Wait up to 30s for update check before launching
 
     import webview
     from api import API
