@@ -1,25 +1,31 @@
 """Entry point — launches the Cliniko Assistant GUI via pywebview."""
 import subprocess
+import sys
 import threading
 from pathlib import Path
 
 APP_DIR = Path(__file__).parent
 
 
-def _git_pull():
+def _auto_update():
+    """Check GitHub for a newer version and apply it if found."""
     try:
-        subprocess.run(
-            ["git", "pull", "--ff-only"],
-            cwd=APP_DIR,
-            capture_output=True,
-            timeout=15,
-        )
+        from updater import check_and_update
+        updated = check_and_update()
+        if updated:
+            # Restart the process with the new code
+            subprocess.Popen([sys.executable] + sys.argv)
+            sys.exit(0)
     except Exception:
         pass
 
 
 if __name__ == "__main__":
-    threading.Thread(target=_git_pull, daemon=True).start()
+    # Check for updates in background (non-blocking on first run,
+    # but restarts if update found before window opens)
+    update_thread = threading.Thread(target=_auto_update, daemon=False)
+    update_thread.start()
+    update_thread.join(timeout=8)  # Wait up to 8s for update check before launching
 
     import webview
     from api import API
