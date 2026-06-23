@@ -52,6 +52,8 @@ class API:
                 raise Exception("Cliniko is temporarily unavailable (502). Please wait a moment and click Read & Extract again.")
             if "503" in err or "504" in err:
                 raise Exception("Cliniko is temporarily unavailable. Please wait a moment and try again.")
+            if "APIConnectionError" in err or "Connection error" in err:
+                raise Exception("Cannot reach the AI service (Anthropic). Check that ANTHROPIC_API_KEY is set in your .env file and that the internet connection is working.")
             raise
 
     def preview_source_pdf(self, download_url: str, filename: str = "") -> dict:
