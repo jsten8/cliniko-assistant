@@ -39,12 +39,20 @@ class API:
     # ── PDF extraction ──────────────────────────────────────────────────────────
 
     def extract_pdf(self, download_url: str) -> dict:
-        import cliniko
-        data = cliniko.download_attachment_bytes(download_url)
-        text = pdf_extractor.extract_text(data)
-        fields = pdf_extractor.parse_fields(text)
-        _session["last_pdf_bytes"] = data
-        return fields
+        try:
+            import cliniko
+            data = cliniko.download_attachment_bytes(download_url)
+            text = pdf_extractor.extract_text(data)
+            fields = pdf_extractor.parse_fields(text)
+            _session["last_pdf_bytes"] = data
+            return fields
+        except Exception as e:
+            err = str(e)
+            if "502" in err or "Bad Gateway" in err:
+                raise Exception("Cliniko is temporarily unavailable (502). Please wait a moment and click Read & Extract again.")
+            if "503" in err or "504" in err:
+                raise Exception("Cliniko is temporarily unavailable. Please wait a moment and try again.")
+            raise
 
     def preview_source_pdf(self, download_url: str, filename: str = "") -> dict:
         try:

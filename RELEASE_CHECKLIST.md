@@ -154,12 +154,21 @@ All should exist. If any are missing, the PRESERVE list in `updater.py` has a bu
 
 ---
 
+## 11. 502 / Cliniko Downtime Handling (was broken — v1.0.4/1.0.5)
+
+- [ ] When Cliniko returns a 502, error message shown is human-readable ("Cliniko is temporarily unavailable") — NOT raw HTML
+- [ ] Clicking "Read & Extract" a second time succeeds once Cliniko recovers (retry logic in `cliniko.py`)
+- [ ] 502 during worklist load does not crash the app — worklist still renders with available patients
+
+---
+
 ## Failure reference
 
 | Symptom | Likely cause | File to check |
 |---|---|---|
 | Version not updating | updater.py timeout / network | `update.log` |
-| 502 on Read & Extract | Cliniko server blip | `cliniko.py` retry logic |
+| 502 on Read & Extract — raw HTML shown | Error not caught in api.py | `api.py` extract_pdf |
+| 502 on Read & Extract — persists after retry | Cliniko genuinely down or URL expired | Wait and try again |
 | Image files in worklist | Filter bug | `worklist.py` _PDF_EXTENSIONS |
 | Blank fields after extract | Claude OCR / bad PDF | `pdf_extractor.py` |
 | "Could not open PDF" | docx2pdf / Word not found | `word_builder.py` fallback |
