@@ -162,11 +162,13 @@ All should exist. If any are missing, the PRESERVE list in `updater.py` has a bu
 
 ---
 
-## 12. Anthropic API Connectivity (was broken — v1.0.5)
+## 12. Anthropic API Connectivity (was broken — v1.0.5/1.0.6)
 
 - [ ] `ANTHROPIC_API_KEY` is present in Steven's `.env` — run `grep ANTHROPIC_API_KEY ~/Documents/cliniko-assistant-main/.env`
+- [ ] Key is valid — run: `/Library/Frameworks/Python.framework/Versions/3.14/bin/python3 -c "import anthropic; c = anthropic.Anthropic(api_key='YOUR_KEY'); print(c.models.list())"` — must NOT return 401
 - [ ] "Read & Extract" on a real patient succeeds (no "APIConnectionError" or "Connection error")
 - [ ] If Anthropic is unreachable, error shown is human-readable (not a raw exception)
+- [ ] API key is never pasted into Terminal output or shared — rotate immediately if exposed
 
 ---
 
