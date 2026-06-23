@@ -96,7 +96,14 @@ def get_attachment_content_url(attachment: dict) -> str:
 
 
 def download_attachment_bytes(download_url: str) -> bytes:
+    import time
     with httpx.Client(timeout=60, follow_redirects=True) as client:
-        resp = client.get(download_url, auth=_auth(), headers=_headers())
+        for attempt in range(3):
+            resp = client.get(download_url, auth=_auth(), headers=_headers())
+            if resp.status_code in (429, 502, 503, 504):
+                time.sleep(2 ** attempt)
+                continue
+            resp.raise_for_status()
+            return resp.content
         resp.raise_for_status()
         return resp.content
