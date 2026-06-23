@@ -14,7 +14,7 @@ def send_email(
     """Compose and send an email in Outlook using AppleScript."""
     safe_to = to.replace('"', '')
     safe_subject = subject.replace('"', '').replace('\\', '')
-    safe_body = body.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+    safe_body = body.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\r')
     safe_path = str(pdf_path).replace('"', '')
     cc_line = f'make new to recipient at end of to recipients with properties {{address:"{safe_to}"}}'
     cc_script = ""
