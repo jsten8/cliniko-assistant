@@ -727,7 +727,15 @@ function renderMockWorklist() {
 }
 
 // ── Init ────────────────────────────────────────────────────────────────────
-window.addEventListener('pywebviewready', () => {
+window.addEventListener('pywebviewready', async () => {
+  const a = api();
+  if (a) {
+    try {
+      const v = await a.get_version();
+      const el = document.getElementById('app-version');
+      if (el) el.textContent = `v${v}`;
+    } catch (_) {}
+  }
   refreshWorklist();
 });
 

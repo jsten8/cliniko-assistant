@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 import config
+import version
 import sent_log
 import db
 import worklist as wl_module
@@ -218,3 +219,6 @@ class API:
 
     def get_workflow_labels(self) -> dict:
         return config.WORKFLOW_LABELS
+
+    def get_version(self) -> str:
+        return version.VERSION
