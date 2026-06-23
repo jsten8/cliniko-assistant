@@ -320,77 +320,44 @@ async function openGeneratedPdf() {
 
 // ── SCREEN 5: EMAIL ────────────────────────────────────────────────────────
 async function openOutlookPreview() {
+  // Skip the preview modal — open Outlook directly
   const a = api();
   const fields = collectFields();
-  let subject = 'Referral Letter';
-  let body = 'Please find the attached referral letter.';
-  let to = document.getElementById('s5-to').value;
+  const to = document.getElementById('s5-to').value || fields.doctor_email || '';
+  const sendBtn = document.getElementById('s5-send-btn');
 
-  if (a) {
-    try {
-      const rendered = await a.render_email(state.currentWorkflow, fields);
-      subject = rendered.subject;
-      body = rendered.body;
-    } catch (_) {}
+  if (sendBtn) {
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<span class="spinner"></span> Opening Outlook…';
   }
 
-  document.getElementById('outlook-to').textContent = to || fields.doctor_email || '';
-  document.getElementById('outlook-subject').textContent = subject;
-  document.getElementById('outlook-att-name').textContent = state.generatedPdfName || '';
-  document.getElementById('outlook-body').innerHTML = body.replace(/\n/g, '<br>');
-  document.getElementById('outlook-sending').style.display = 'none';
-  document.getElementById('confirm-send-btn').disabled = false;
-  document.getElementById('outlook-send-btn').disabled = false;
-  document.getElementById('outlookModal').classList.add('open');
-}
-
-async function confirmSend() {
-  const to = document.getElementById('outlook-to').textContent;
-  const fields = collectFields();
-  const sendBtn = document.getElementById('confirm-send-btn');
-  const headerSend = document.getElementById('outlook-send-btn');
-
-  sendBtn.disabled = true;
-  headerSend.disabled = true;
-  sendBtn.innerHTML = '<span class="spinner"></span> Sending…';
-
-  const a = api();
   let ok = false;
-
   if (a) {
     try {
       const result = await a.send_email(to, state.currentWorkflow, fields);
       ok = result.ok;
       if (!ok) {
         alert('Send failed: ' + result.error);
-        sendBtn.disabled = false;
-        headerSend.disabled = false;
-        sendBtn.textContent = 'Send Now →';
+        if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Review & Send →'; }
         return;
       }
     } catch (err) {
       alert('Send error: ' + err);
-      sendBtn.disabled = false;
-      headerSend.disabled = false;
-      sendBtn.textContent = 'Send Now →';
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Review & Send →'; }
       return;
     }
   } else {
-    ok = true; // demo
+    ok = true;
   }
 
   if (ok) {
-    document.getElementById('outlook-sending').style.display = 'block';
-    document.getElementById('outlook-sent-to').textContent = 'Sent to ' + to;
-
-    // Mark sent
+    if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Review & Send →'; }
     if (a && state.currentEntry) {
       await a.mark_sent(
         state.currentEntry.patient_id,
         state.currentEntry.file_name,
         state.currentEntry.appointment_date
       );
-      // Save patient
       await a.save_patient(
         state.currentEntry.patient_id,
         fields.patient_name,
@@ -401,12 +368,12 @@ async function confirmSend() {
         state.currentWorkflow
       );
     }
-
-    setTimeout(() => {
-      document.getElementById('outlookModal').classList.remove('open');
-      showProdaScreen(to);
-    }, 1200);
+    showProdaScreen(to);
   }
+}
+
+async function confirmSend() {
+  // Legacy — no longer used since modal was removed
 }
 
 function closeOutlookModal(e) {
