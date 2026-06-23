@@ -27,8 +27,8 @@ tell application "Microsoft Outlook"
     activate
     set newMsg to make new outgoing message with properties {{subject:"{safe_subject}", plain text content:"{safe_body}"}}
     tell newMsg
-        {cc_line}
-        {cc_script}
+        make new to recipient with properties {{email address:{{address:"{safe_to}"}}}}
+        {f'make new cc recipient with properties {{email address:{{address:"{cc.replace(chr(34), "")}"}}}}'  if cc else ""}
         make new attachment with properties {{file:POSIX file "{safe_path}"}}
     end tell
     open newMsg
