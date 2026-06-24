@@ -88,9 +88,10 @@ function renderWorklist(entries) {
     const apptDate = e.appointment_date
       ? new Date(e.appointment_date).toLocaleDateString('en-AU', { day:'2-digit', month:'short', year:'numeric' })
       : '—';
-    const actionBtn = e.sent ? '' :
-      `<button class="btn btn-primary btn-sm" onclick="selectEntry(${i})">Process →</button>`;
-    return `<tr class="worklist-row ${sentCls}" onclick="${e.sent ? '' : `selectEntry(${i})`}">
+    const actionBtn = e.sent
+      ? `<button class="btn btn-ghost btn-sm" onclick="selectEntry(${i})" style="opacity:0.6;">Re-process →</button>`
+      : `<button class="btn btn-primary btn-sm" onclick="selectEntry(${i})">Process →</button>`;
+    return `<tr class="worklist-row ${sentCls}" onclick="selectEntry(${i})">`
       <td>${status}</td>
       <td><span class="patient-name">${e.patient_name || '—'}</span></td>
       <td>${tag} <span style="font-size:12px;color:var(--text-secondary);margin-left:4px;">${e.file_name}</span></td>
