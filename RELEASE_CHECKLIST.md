@@ -178,7 +178,8 @@ All should exist. If any are missing, the PRESERVE list in `updater.py` has a bu
 - [ ] The PDF exists on Steven's Desktop after generation
 - [ ] "Open in Preview" opens a PDF (not Word, not Pages)
 - [ ] Word may open visibly during conversion — this is acceptable as long as it closes automatically
-- [ ] If the Preview Document screen shows a `.docx`, the AppleScript conversion failed — check `word_builder.py`
+- [ ] If the Preview Document screen shows a `.docx`, the conversion failed — check `word_builder.py`
+- [ ] **First run on a new machine**: Word will show a "Grant File Access" dialog for the `cliniko-assistant-main` folder — Steven must click **Select...** once. This is permanent and will not appear again for that folder. After granting access the PDF will generate correctly.
 
 ---
 
