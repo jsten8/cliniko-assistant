@@ -69,25 +69,19 @@ def convert_to_pdf(docx_path: Path) -> Path:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             continue
 
-    # MS Word via docx2pdf — run with a timeout so it never hangs forever
+    # MS Word via AppleScript — silent background conversion, Word never appears
     try:
-        import threading
-        from docx2pdf import convert
-        result = [None]
-        error = [None]
-
-        def _convert():
-            try:
-                convert(str(docx_path), str(pdf_path))
-                result[0] = True
-            except Exception as e:
-                error[0] = e
-
-        t = threading.Thread(target=_convert, daemon=True)
-        t.start()
-        t.join(timeout=60)  # Give Word 60s max
-
-        if pdf_path.exists():
+        import subprocess as _sp
+        script = f"""
+tell application "Microsoft Word"
+    set theDoc to open (POSIX file "{docx_path}") with ReadOnly
+    set theTarget to "{pdf_path}"
+    save as theDoc file name theTarget file format format PDF
+    close theDoc saving no
+end tell
+"""
+        r = _sp.run(["osascript", "-e", script], capture_output=True, timeout=60)
+        if r.returncode == 0 and pdf_path.exists():
             return pdf_path
     except Exception:
         pass
