@@ -69,22 +69,24 @@ def convert_to_pdf(docx_path: Path) -> Path:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             continue
 
-    # MS Word via AppleScript — silent background conversion, Word never appears
+    # MS Word via AppleScript — convert to PDF
     try:
         import subprocess as _sp
         script = f"""
 tell application "Microsoft Word"
-    set theDoc to open (POSIX file "{docx_path}") with ReadOnly
-    set theTarget to "{pdf_path}"
-    save as theDoc file name theTarget file format format PDF
+    set theDoc to open (POSIX file "{docx_path}")
+    save as theDoc file name "{pdf_path}" file format format PDF
     close theDoc saving no
 end tell
 """
-        r = _sp.run(["osascript", "-e", script], capture_output=True, timeout=60)
-        if r.returncode == 0 and pdf_path.exists():
+        r = _sp.run(["osascript", "-e", script], capture_output=True, text=True, timeout=60)
+        if pdf_path.exists():
             return pdf_path
-    except Exception:
-        pass
+        # Log the error for debugging
+        if r.stderr:
+            print(f"AppleScript error: {r.stderr}")
+    except Exception as e:
+        print(f"Word AppleScript conversion failed: {e}")
 
     # Fallback: return the .docx — opens in Pages/Word fine
     return docx_path
