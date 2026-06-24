@@ -172,6 +172,16 @@ All should exist. If any are missing, the PRESERVE list in `updater.py` has a bu
 
 ---
 
+## 13. PDF Conversion (Word → PDF)
+
+- [ ] After clicking "Generate & Continue", the Preview Document screen shows a `.pdf` filename — NOT `.docx`
+- [ ] The PDF exists on Steven's Desktop after generation
+- [ ] "Open in Preview" opens a PDF (not Word, not Pages)
+- [ ] Word may open visibly during conversion — this is acceptable as long as it closes automatically
+- [ ] If the Preview Document screen shows a `.docx`, the AppleScript conversion failed — check `word_builder.py`
+
+---
+
 ## Failure reference
 
 | Symptom | Likely cause | File to check |
