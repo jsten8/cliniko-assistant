@@ -299,8 +299,15 @@ async function generateDocument() {
     state.generatedPdfName = result.filename;
     document.getElementById('s4-filename').textContent = result.filename;
     document.getElementById('s5-pdf-name').textContent = result.filename;
-    // Pre-fill email to
     document.getElementById('s5-to').value = fields.doctor_email || '';
+    // Pre-fill subject and body from email template
+    if (a) {
+      try {
+        const rendered = await a.render_email(state.currentWorkflow, fields);
+        document.getElementById('s5-subject').value = rendered.subject || '';
+        document.getElementById('s5-body').value = rendered.body || '';
+      } catch (_) {}
+    }
     goTo('s4');
   } else {
     status.textContent = 'Error: ' + result.error;
@@ -320,10 +327,12 @@ async function openGeneratedPdf() {
 
 // ── SCREEN 5: EMAIL ────────────────────────────────────────────────────────
 async function openOutlookPreview() {
-  // Skip the preview modal — open Outlook directly
+  // Open Outlook directly with the edited subject/body from the send screen
   const a = api();
   const fields = collectFields();
   const to = document.getElementById('s5-to').value || fields.doctor_email || '';
+  const subject = document.getElementById('s5-subject').value || '';
+  const body = document.getElementById('s5-body').value || '';
   const sendBtn = document.getElementById('s5-send-btn');
 
   if (sendBtn) {
@@ -334,7 +343,7 @@ async function openOutlookPreview() {
   let ok = false;
   if (a) {
     try {
-      const result = await a.send_email(to, state.currentWorkflow, fields);
+      const result = await a.send_email_direct(to, subject, body, state.currentWorkflow, fields);
       ok = result.ok;
       if (!ok) {
         alert('Send failed: ' + result.error);

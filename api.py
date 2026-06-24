@@ -163,6 +163,23 @@ class API:
             "cc": tmpl.get("cc", ""),
         }
 
+    def send_email_direct(self, to: str, subject: str, body: str, workflow_key: str, fields: dict) -> dict:
+        """Send email using subject/body as edited by the user on the send screen."""
+        try:
+            pdf_path = _session.get("generated_pdf")
+            if not pdf_path:
+                return {"ok": False, "error": "No generated PDF found"}
+            doc_path = Path(pdf_path)
+            if not doc_path.exists():
+                doc_path = doc_path.with_suffix(".docx")
+            tmpl = email_templates.get(workflow_key)
+            cc = tmpl.get("cc") or None
+            emailer.send_email(to=to, subject=subject, body=body,
+                               pdf_path=doc_path, cc=cc)
+            return {"ok": True}
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     def send_email(self, to: str, workflow_key: str, fields: dict) -> dict:
         try:
             pdf_path = _session.get("generated_pdf")
