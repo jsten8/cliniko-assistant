@@ -69,31 +69,22 @@ def convert_to_pdf(docx_path: Path) -> Path:
         except (FileNotFoundError, subprocess.TimeoutExpired):
             continue
 
-    # MS Word via AppleScript — convert in app dir (Word has permission there),
-    # then copy PDF to the final destination.
+    # MS Word via docx2pdf — convert in app dir (Word has permission there),
+    # then move PDF to the final destination.
     try:
-        import subprocess as _sp
         import shutil as _shutil
+        from docx2pdf import convert
         tmp_docx = config.APP_DIR / "tmp_convert.docx"
         tmp_pdf  = config.APP_DIR / "tmp_convert.pdf"
         _shutil.copy2(docx_path, tmp_docx)
-        script = f"""
-tell application "Microsoft Word"
-    set theDoc to open (POSIX file "{tmp_docx}")
-    save as theDoc file name "{tmp_pdf}" file format format PDF
-    close theDoc saving no
-end tell
-"""
-        r = _sp.run(["osascript", "-e", script], capture_output=True, text=True, timeout=60)
+        convert(str(tmp_docx), str(tmp_pdf))
         if tmp_pdf.exists():
             _shutil.move(str(tmp_pdf), str(pdf_path))
             tmp_docx.unlink(missing_ok=True)
             return pdf_path
-        if r.stderr:
-            print(f"AppleScript error: {r.stderr}")
         tmp_docx.unlink(missing_ok=True)
     except Exception as e:
-        print(f"Word AppleScript conversion failed: {e}")
+        print(f"docx2pdf conversion failed: {e}")
 
     # Fallback: return the .docx — opens in Pages/Word fine
     return docx_path
