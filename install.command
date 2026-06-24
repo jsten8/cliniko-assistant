@@ -77,14 +77,31 @@ else
   echo ""
 fi
 
-# ── 4. Create Desktop launcher ───────────────────────────────────────────────
+# ── 4. Configure Terminal to close window when shell exits ───────────────────
+"$PYTHON" -c "
+import plistlib, os
+path = os.path.expanduser('~/Library/Preferences/com.apple.Terminal.plist')
+try:
+    with open(path, 'rb') as f:
+        p = plistlib.load(f)
+    ws = p.get('Window Settings', {})
+    for k in ws:
+        ws[k]['shellExitAction'] = 1
+    with open(path, 'wb') as f:
+        plistlib.dump(p, f)
+except Exception:
+    pass
+" 2>/dev/null
+
+# ── 5. Create Desktop launcher ───────────────────────────────────────────────
 LAUNCHER="$HOME/Desktop/Cliniko Assistant.command"
 
 cat > "$LAUNCHER" << EOF
 #!/bin/bash
 cd "$SCRIPT_DIR"
-"$PYTHON" main.py > /tmp/cliniko.log 2>&1 &
-sleep 3 && osascript -e 'tell application "Terminal" to close front window' > /dev/null 2>&1
+nohup "$PYTHON" main.py > /tmp/cliniko.log 2>&1 < /dev/null &
+disown
+exec sleep 0
 EOF
 
 chmod +x "$LAUNCHER"

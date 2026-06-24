@@ -182,6 +182,13 @@ All should exist. If any are missing, the PRESERVE list in `updater.py` has a bu
 
 ---
 
+## 14. Terminal closes after launch (was broken)
+
+- [ ] Double-click the Desktop launcher — the app opens AND the terminal window closes automatically with no prompts
+- [ ] If terminal stays open: run the Python plist script to set `shellExitAction=1` on all profiles, then fully quit Terminal (Dock → Quit) and retry
+
+---
+
 ## Failure reference
 
 | Symptom | Likely cause | File to check |
