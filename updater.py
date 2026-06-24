@@ -16,7 +16,10 @@ PRESERVE = {".env", "patients.db", "sent_log.json", "templates", "email_template
 
 def _remote_version() -> str:
     import httpx
-    resp = httpx.get(RAW_VERSION, timeout=10, follow_redirects=True)
+    import time
+    # Cache-bust so GitHub CDN always returns the latest file
+    url = f"{RAW_VERSION}?t={int(time.time())}"
+    resp = httpx.get(url, timeout=10, follow_redirects=True)
     for line in resp.text.splitlines():
         if line.startswith("VERSION"):
             return line.split('"')[1]

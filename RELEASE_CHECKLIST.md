@@ -17,7 +17,14 @@ Tests are ordered: fast/cheap first, slow/manual last.
 
 This must be tested on **Steven's machine** every release.
 
-### 1a. GitHub is reachable
+### 1a. Verify version is live on GitHub (no CDN cache)
+After pushing, run this — it must return the NEW version immediately:
+```
+curl -s "https://raw.githubusercontent.com/jsten8/cliniko-assistant/main/version.py?t=$(date +%s)"
+```
+If it returns the old version, wait 30s and retry. Do NOT tell Steven to open the app until this returns the correct version.
+
+### 1b. GitHub is reachable
 Run in Terminal on Steven's Mac:
 ```
 curl -s https://raw.githubusercontent.com/jsten8/cliniko-assistant/main/version.py
