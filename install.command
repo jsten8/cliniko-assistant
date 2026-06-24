@@ -83,9 +83,8 @@ LAUNCHER="$HOME/Desktop/Cliniko Assistant.command"
 cat > "$LAUNCHER" << EOF
 #!/bin/bash
 cd "$SCRIPT_DIR"
-git pull --ff-only > /dev/null 2>&1 &
-nohup "$PYTHON" main.py > /tmp/cliniko.log 2>&1 &
-sleep 1 && osascript -e 'tell application "Terminal" to close (every window whose name contains "Cliniko")' &
+"$PYTHON" main.py > /tmp/cliniko.log 2>&1 &
+sleep 3 && osascript -e 'tell application "Terminal" to close front window' > /dev/null 2>&1
 EOF
 
 chmod +x "$LAUNCHER"
