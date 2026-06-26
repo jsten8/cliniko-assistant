@@ -708,11 +708,11 @@ function renderMockWorklist() {
 }
 
 // ── Init ────────────────────────────────────────────────────────────────────
-// Set version immediately from version.js (no pywebview call needed)
-document.addEventListener('DOMContentLoaded', () => {
+// Set version immediately — scripts are at bottom of body so DOM is already ready
+(function() {
   const el = document.getElementById('app-version');
   if (el && window.APP_VERSION) el.textContent = `v${window.APP_VERSION}`;
-});
+})();
 
 window.addEventListener('pywebviewready', () => {
   refreshWorklist();
