@@ -28,7 +28,16 @@ _worklist_future: concurrent.futures.Future | None = None
 
 def _start_worklist_preload(days: int = 7) -> None:
     global _worklist_future
-    _worklist_future = _worklist_executor.submit(wl_module.build_worklist, days)
+    _worklist_future = _worklist_executor.submit(_preload_and_cache, days)
+
+
+def _preload_and_cache(days: int) -> list[dict]:
+    """Run worklist scan and write result to a cache file JS can fetch directly."""
+    import json as _json
+    result = wl_module.build_worklist(days)
+    cache_path = config.APP_DIR / "web" / "_worklist_cache.json"
+    cache_path.write_text(_json.dumps({"days": days, "entries": result}))
+    return result
 
 
 _start_worklist_preload()

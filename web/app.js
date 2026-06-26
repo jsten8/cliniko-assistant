@@ -49,24 +49,39 @@ async function refreshWorklist() {
   const a = api();
   if (!a) { renderMockWorklist(); return; }
 
+  // Try reading from the pre-built cache file first (bypasses pywebview bridge)
+  // Falls back to API call if cache isn't ready yet
+  async function loadWorklist(days) {
+    try {
+      const resp = await fetch(`_worklist_cache.json?t=${Date.now()}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.days === days) return data.entries;
+      }
+    } catch (_) {}
+    // Cache miss — call API directly
+    return await a.get_worklist(days);
+  }
+
   const withTimeout = (promise, ms, label) =>
-    Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms/1000}s (${label})`)), ms))]);
+    Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms/1000}s waiting for Cliniko. Check internet connection and click Refresh.`)), ms))]);
 
   try {
-    // Update last-run display
-    const lastRun = await withTimeout(a.get_last_run(), 10000, 'get_last_run');
-    if (lastRun) {
-      const d = new Date(lastRun);
-      document.getElementById('last-run-label').textContent =
-        `Last run: ${d.toLocaleDateString('en-AU', { day:'2-digit', month:'short' })} ${d.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' })}`;
-    }
-
-    const entries = await withTimeout(a.get_worklist(days), 15000, 'get_worklist');
+    const entries = await withTimeout(loadWorklist(days), 15000, 'worklist');
     state.worklist = entries;
     renderWorklist(entries);
     badge.textContent = entries.filter(e => !e.sent).length + ' pending';
 
-    await a.update_last_run();
+    // Update last-run display (non-blocking, best-effort)
+    if (a) a.get_last_run().then(lr => {
+      if (lr) {
+        const d = new Date(lr);
+        document.getElementById('last-run-label').textContent =
+          `Last run: ${d.toLocaleDateString('en-AU', { day:'2-digit', month:'short' })} ${d.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' })}`;
+      }
+      a.update_last_run().catch(() => {});
+    }).catch(() => {});
+
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="5" style="padding:24px 16px;">
       <div class="error-banner" style="margin:0">Error loading worklist: ${err}</div>
