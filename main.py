@@ -92,20 +92,12 @@ if __name__ == "__main__":
     from api import API, _worklist_future
     from version import VERSION
 
-    # Start local data server before opening the window
-    port = _free_port()
-    _start_data_server(port, _worklist_future, timeout=45)
-
-    # Inject version + data server port into HTML
+    # Inject version into HTML and write runtime file
     html_path = APP_DIR / "web" / "index.html"
     html = html_path.read_text(encoding="utf-8")
     html = html.replace(
         'id="app-version" style="margin-left:8px;opacity:0.5;">',
         f'id="app-version" style="margin-left:8px;opacity:0.5;">v{VERSION}'
-    )
-    html = html.replace(
-        'window.__DATA_PORT=0;',
-        f'window.__DATA_PORT={port};'
     )
     runtime_html = APP_DIR / "web" / "_runtime.html"
     runtime_html.write_text(html, encoding="utf-8")
@@ -119,4 +111,14 @@ if __name__ == "__main__":
         min_size=(900, 600),
         background_color="#F2F0EB",
     )
-    webview.start(debug=False)
+
+    def _push_worklist_when_ready():
+        """Wait for worklist scan to finish then push result into JS via evaluate_js."""
+        import json as _json
+        try:
+            entries = _worklist_future.result(timeout=45)
+            window.evaluate_js(f'window.__pushWorklist({_json.dumps(entries)})')
+        except Exception as e:
+            window.evaluate_js(f'window.__pushWorklist(null, {_json.dumps(str(e))})')
+
+    webview.start(_push_worklist_when_ready, debug=False)
