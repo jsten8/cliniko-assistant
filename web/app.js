@@ -708,15 +708,13 @@ function renderMockWorklist() {
 }
 
 // ── Init ────────────────────────────────────────────────────────────────────
-window.addEventListener('pywebviewready', async () => {
-  const a = api();
-  if (a) {
-    try {
-      const v = await a.get_version();
-      const el = document.getElementById('app-version');
-      if (el) el.textContent = `v${v}`;
-    } catch (_) {}
-  }
+// Set version immediately from version.js (no pywebview call needed)
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('app-version');
+  if (el && window.APP_VERSION) el.textContent = `v${window.APP_VERSION}`;
+});
+
+window.addEventListener('pywebviewready', () => {
   refreshWorklist();
 });
 

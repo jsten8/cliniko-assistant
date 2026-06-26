@@ -29,6 +29,10 @@ if __name__ == "__main__":
 
     import webview
     from api import API
+    from version import VERSION
+
+    # Write version into a JS file so the UI can show it instantly (no pywebview call needed)
+    (APP_DIR / "web" / "version.js").write_text(f'window.APP_VERSION = "{VERSION}";\n')
 
     html_path = APP_DIR / "web" / "index.html"
     window = webview.create_window(
