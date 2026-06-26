@@ -22,6 +22,20 @@ def _auto_update():
         pass
 
 
+def _push_worklist_when_ready(window, future):
+    """
+    Wait for the worklist scan to finish then push the result into JS via evaluate_js.
+    Must be called AFTER the page has loaded — use window.events.loaded to trigger this.
+    Runs in a background thread so it can block on future.result() without freezing the UI.
+    """
+    import json as _json
+    try:
+        entries = future.result(timeout=45)
+        window.evaluate_js(f'window.__pushWorklist({_json.dumps(entries)})')
+    except Exception as e:
+        window.evaluate_js(f'window.__pushWorklist(null, {_json.dumps(str(e))})')
+
+
 def _free_port() -> int:
     with socket.socket() as s:
         s.bind(('', 0))
@@ -112,13 +126,12 @@ if __name__ == "__main__":
         background_color="#F2F0EB",
     )
 
-    def _push_worklist_when_ready():
-        """Wait for worklist scan to finish then push result into JS via evaluate_js."""
-        import json as _json
-        try:
-            entries = _worklist_future.result(timeout=45)
-            window.evaluate_js(f'window.__pushWorklist({_json.dumps(entries)})')
-        except Exception as e:
-            window.evaluate_js(f'window.__pushWorklist(null, {_json.dumps(str(e))})')
+    # Fire push only after the page is fully loaded so __pushWorklist is defined in JS.
+    # Runs in a thread so future.result() doesn't block the UI.
+    window.events.loaded += lambda: threading.Thread(
+        target=_push_worklist_when_ready,
+        args=(window, _worklist_future),
+        daemon=True,
+    ).start()
 
-    webview.start(_push_worklist_when_ready, debug=False)
+    webview.start(debug=False)
