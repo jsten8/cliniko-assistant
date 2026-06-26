@@ -49,16 +49,19 @@ async function refreshWorklist() {
   const a = api();
   if (!a) { renderMockWorklist(); return; }
 
+  const withTimeout = (promise, ms, label) =>
+    Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms/1000}s (${label})`)), ms))]);
+
   try {
     // Update last-run display
-    const lastRun = await a.get_last_run();
+    const lastRun = await withTimeout(a.get_last_run(), 10000, 'get_last_run');
     if (lastRun) {
       const d = new Date(lastRun);
       document.getElementById('last-run-label').textContent =
         `Last run: ${d.toLocaleDateString('en-AU', { day:'2-digit', month:'short' })} ${d.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' })}`;
     }
 
-    const entries = await a.get_worklist(days);
+    const entries = await withTimeout(a.get_worklist(days), 45000, 'get_worklist');
     state.worklist = entries;
     renderWorklist(entries);
     badge.textContent = entries.filter(e => !e.sent).length + ' pending';
