@@ -698,7 +698,7 @@ function renderMockWorklist() {
   if (el && window.APP_VERSION) el.textContent = `v${window.APP_VERSION}`;
 })();
 
-// Receive worklist data pushed from Python via evaluate_js
+// Receive worklist — used by manual refresh (pywebview API) and as fallback
 window.__pushWorklist = function(entries, error) {
   const tbody = document.getElementById('wl-tbody');
   const badge = document.getElementById('wl-count-badge');
@@ -715,9 +715,49 @@ window.__pushWorklist = function(entries, error) {
   badge.textContent = entries.filter(e => !e.sent).length + ' pending';
 };
 
-window.addEventListener('pywebviewready', () => {
-  // worklist will be pushed via window.__pushWorklist once scan completes
-});
+// Poll /worklist on the same HTTP server that served this page.
+// Same-origin fetch — no CORS, no file:// restrictions.
+(function pollWorklist() {
+  const started = Date.now();
+  const TIMEOUT_MS = 46000;
+
+  function applyResult(data) {
+    const badge = document.getElementById('wl-count-badge');
+    document.getElementById('wl-status').textContent = '';
+    if (data.status === 'ok') {
+      state.worklist = data.entries;
+      renderWorklist(data.entries);
+      badge.textContent = data.entries.filter(e => !e.sent).length + ' pending';
+    } else {
+      const msg = data.error || 'Unknown error';
+      document.getElementById('wl-tbody').innerHTML = `<tr><td colspan="5" style="padding:24px 16px;">
+        <div class="error-banner" style="margin:0">${msg} <button class="btn btn-sm" onclick="refreshWorklist()" style="margin-left:8px;">Refresh</button></div>
+      </td></tr>`;
+      badge.textContent = 'error';
+    }
+  }
+
+  function poll() {
+    if (Date.now() - started >= TIMEOUT_MS) {
+      applyResult({ status: 'timeout', error: 'Cliniko took too long (45s). Click Refresh.' });
+      return;
+    }
+    fetch('/worklist')
+      .then(r => r.json())
+      .then(data => {
+        if (data.status) {
+          applyResult(data);
+        } else {
+          setTimeout(poll, 1000);
+        }
+      })
+      .catch(() => setTimeout(poll, 1000));
+  }
+
+  setTimeout(poll, 500);
+})();
+
+window.addEventListener('pywebviewready', () => {});
 
 // If no pywebview after 300ms, show mock data
 setTimeout(() => {
