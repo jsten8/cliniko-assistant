@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import shutil
 import json
+import concurrent.futures
 from pathlib import Path
 
 import config
@@ -20,16 +21,40 @@ import email_templates
 # Store generated paths in memory for the current session
 _session: dict = {}
 
+# Preload worklist in background immediately at startup so it's ready when JS asks
+_worklist_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="worklist")
+_worklist_future: concurrent.futures.Future | None = None
+
+
+def _start_worklist_preload(days: int = 7) -> None:
+    global _worklist_future
+    _worklist_future = _worklist_executor.submit(wl_module.build_worklist, days)
+
+
+_start_worklist_preload()
+
 
 class API:
     # ── Worklist ────────────────────────────────────────────────────────────────
 
     def get_worklist(self, days: int) -> list[dict]:
+        global _worklist_future
+        days = int(days)
+        # Use preloaded result if days matches and it's ready (or nearly ready)
+        if _worklist_future is not None and days == config.SCAN_DAYS:
+            future = _worklist_future
+            _worklist_future = None  # consume it — next call will run fresh
+        else:
+            # Different day range or no preload — run now
+            future = _worklist_executor.submit(wl_module.build_worklist, days)
+
         try:
-            return wl_module.build_worklist(int(days))
-        except Exception as e:
-            print(f"[get_worklist] ERROR: {e}")
-            raise
+            return future.result(timeout=12)
+        except concurrent.futures.TimeoutError:
+            raise Exception(
+                "Cliniko took too long to respond (>12s). "
+                "Check the internet connection and click Refresh to try again."
+            )
 
     def get_last_run(self) -> str | None:
         lr = sent_log.get_last_run()

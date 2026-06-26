@@ -61,7 +61,7 @@ async function refreshWorklist() {
         `Last run: ${d.toLocaleDateString('en-AU', { day:'2-digit', month:'short' })} ${d.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' })}`;
     }
 
-    const entries = await withTimeout(a.get_worklist(days), 45000, 'get_worklist');
+    const entries = await withTimeout(a.get_worklist(days), 15000, 'get_worklist');
     state.worklist = entries;
     renderWorklist(entries);
     badge.textContent = entries.filter(e => !e.sent).length + ' pending';
@@ -77,9 +77,10 @@ async function refreshWorklist() {
 
 function renderWorklist(entries) {
   const tbody = document.getElementById('wl-tbody');
-  if (!entries.length) {
+  if (!entries || !entries.length) {
     tbody.innerHTML = `<tr><td colspan="5" style="padding:32px 16px;text-align:center;color:var(--text-muted);font-size:13px;">
-      No matching files found in this date range.</td></tr>`;
+      No EPC, DVA or Workcover files found in the last ${document.getElementById('scan-days').value || 7} days.<br>
+      <span style="font-size:11px;margin-top:4px;display:block;">Try increasing the date range or upload a file in Cliniko first.</span></td></tr>`;
     return;
   }
   tbody.innerHTML = entries.map((e, i) => {
