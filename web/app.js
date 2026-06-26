@@ -698,24 +698,53 @@ function renderMockWorklist() {
   if (el && window.APP_VERSION) el.textContent = `v${window.APP_VERSION}`;
 })();
 
-// Python pushes worklist data directly via evaluate_js — bypasses pywebview bridge
-window.__pushWorklist = function(entries, error) {
-  const tbody = document.getElementById('wl-tbody');
-  const badge = document.getElementById('wl-count-badge');
-  if (error || !entries) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:24px 16px;">
-      <div class="error-banner" style="margin:0">${error || 'No results returned.'} <button class="btn btn-sm" onclick="refreshWorklist()" style="margin-left:8px;">Refresh</button></div>
-    </td></tr>`;
-    badge.textContent = 'error';
-    return;
+// Poll local data server for worklist results (bypasses pywebview bridge entirely)
+(function pollWorklist() {
+  const port = window.__DATA_PORT;
+  if (!port) return;  // not running inside the app
+
+  const started = Date.now();
+  const TIMEOUT_MS = 46000;
+
+  function applyResult(data) {
+    const tbody = document.getElementById('wl-tbody');
+    const badge = document.getElementById('wl-count-badge');
+    if (data.status === 'ok') {
+      state.worklist = data.entries;
+      renderWorklist(data.entries);
+      badge.textContent = data.entries.filter(e => !e.sent).length + ' pending';
+    } else {
+      const msg = data.error || 'Unknown error';
+      tbody.innerHTML = `<tr><td colspan="5" style="padding:24px 16px;">
+        <div class="error-banner" style="margin:0">${msg} <button class="btn btn-sm" onclick="refreshWorklist()" style="margin-left:8px;">Refresh</button></div>
+      </td></tr>`;
+      badge.textContent = 'error';
+    }
   }
-  state.worklist = entries;
-  renderWorklist(entries);
-  badge.textContent = entries.filter(e => !e.sent).length + ' pending';
-};
+
+  function poll() {
+    if (Date.now() - started >= TIMEOUT_MS) {
+      applyResult({ status: 'timeout', error: 'Cliniko took too long to respond (45s). Check your internet connection and click Refresh.' });
+      return;
+    }
+    fetch(`http://127.0.0.1:${port}/worklist`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.status) {
+          applyResult(data);
+        } else {
+          setTimeout(poll, 1000);  // not ready yet, poll again
+        }
+      })
+      .catch(() => setTimeout(poll, 1000));
+  }
+
+  // Start polling after a short delay to let the page render
+  setTimeout(poll, 500);
+})();
 
 window.addEventListener('pywebviewready', () => {
-  // Worklist is pushed by Python via __pushWorklist — nothing to do here
+  // Worklist is loaded via local HTTP server polling above
 });
 
 // If no pywebview after 300ms, show mock data
