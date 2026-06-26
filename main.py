@@ -31,10 +31,16 @@ if __name__ == "__main__":
     from api import API
     from version import VERSION
 
-    # Write version into a JS file so the UI can show it instantly (no pywebview call needed)
-    (APP_DIR / "web" / "version.js").write_text(f'window.APP_VERSION = "{VERSION}";\n')
-
+    # Inject version directly into HTML at runtime so it shows instantly
     html_path = APP_DIR / "web" / "index.html"
+    html = html_path.read_text(encoding="utf-8")
+    html = html.replace(
+        'id="app-version" style="margin-left:8px;opacity:0.5;">',
+        f'id="app-version" style="margin-left:8px;opacity:0.5;">v{VERSION}'
+    )
+    runtime_html = APP_DIR / "web" / "_runtime.html"
+    runtime_html.write_text(html, encoding="utf-8")
+    html_path = runtime_html
     window = webview.create_window(
         "Cliniko Assistant — Motion Ease Physiotherapy",
         url=str(html_path),
