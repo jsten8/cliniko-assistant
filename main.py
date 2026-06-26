@@ -104,8 +104,8 @@ if __name__ == "__main__":
         f'id="app-version" style="margin-left:8px;opacity:0.5;">v{VERSION}'
     )
     html = html.replace(
-        'window.APP_VERSION',
-        f'window.__DATA_PORT={port}; window.APP_VERSION'
+        'window.__DATA_PORT=0;',
+        f'window.__DATA_PORT={port};'
     )
     runtime_html = APP_DIR / "web" / "_runtime.html"
     runtime_html.write_text(html, encoding="utf-8")
