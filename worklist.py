@@ -39,17 +39,21 @@ def build_worklist(days: int, progress_callback=None) -> list[dict]:
     if progress_callback:
         progress_callback("Scanning recently uploaded files...")
 
-    # Fetch all attachments uploaded in last N days using the global endpoint
-    matching_atts = cliniko._get_all_pages(
+    # Fetch one page of recent attachments — filter by cutoff and keywords immediately
+    # Cap at 100 results; we stop as soon as all on a page are older than cutoff
+    raw = cliniko._get(
         "/patient_attachments",
-        {"sort": "created_at", "order": "desc"},
-        stop_before=cutoff,
-        date_field="created_at",
+        {"sort": "created_at", "order": "desc", "per_page": 100},
     )
+    all_atts = []
+    for key, val in raw.items():
+        if isinstance(val, list):
+            all_atts = val
+            break
 
-    # Filter to worklist keywords only
+    # Filter to worklist keywords AND within cutoff — no need to paginate further
     matching_atts = [
-        a for a in matching_atts
+        a for a in all_atts
         if _matches_worklist(a.get("filename", ""))
         and (a.get("created_at") or "")[:10] >= cutoff
     ]
@@ -73,7 +77,6 @@ def build_worklist(days: int, progress_callback=None) -> list[dict]:
             continue
 
         if pid not in patient_cache:
-            time.sleep(0.35)
             try:
                 patient_cache[pid] = cliniko.fetch_patient(pid)
             except Exception:
