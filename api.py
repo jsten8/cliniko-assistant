@@ -25,7 +25,11 @@ class API:
     # ── Worklist ────────────────────────────────────────────────────────────────
 
     def get_worklist(self, days: int) -> list[dict]:
-        return wl_module.build_worklist(int(days))
+        try:
+            return wl_module.build_worklist(int(days))
+        except Exception as e:
+            print(f"[get_worklist] ERROR: {e}")
+            raise
 
     def get_last_run(self) -> str | None:
         lr = sent_log.get_last_run()

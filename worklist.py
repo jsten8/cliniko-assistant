@@ -36,21 +36,25 @@ def build_worklist(days: int, progress_callback=None) -> list[dict]:
     from datetime import date, timedelta
     cutoff = (date.today() - timedelta(days=days)).isoformat()
 
+    print(f"[worklist] build_worklist(days={days}, cutoff={cutoff})")
     if progress_callback:
         progress_callback("Scanning recently uploaded files...")
 
     # Fetch one page of recent attachments — filter by cutoff and keywords immediately
     # Cap at 100 results; we stop as soon as all on a page are older than cutoff
+    print("[worklist] Calling Cliniko /patient_attachments ...")
     raw = cliniko._get(
         "/patient_attachments",
         {"sort": "created_at", "order": "desc", "per_page": 100},
     )
+    print(f"[worklist] Got response from Cliniko. Keys: {list(raw.keys())[:5]}")
     all_atts = []
     for key, val in raw.items():
         if isinstance(val, list):
             all_atts = val
             break
 
+    print(f"[worklist] Total attachments on page: {len(all_atts)}")
     # Filter to worklist keywords AND within cutoff — no need to paginate further
     matching_atts = [
         a for a in all_atts
@@ -58,6 +62,7 @@ def build_worklist(days: int, progress_callback=None) -> list[dict]:
         and (a.get("created_at") or "")[:10] >= cutoff
     ]
 
+    print(f"[worklist] Matching attachments after filter: {len(matching_atts)}")
     if not matching_atts:
         return []
 
@@ -77,9 +82,12 @@ def build_worklist(days: int, progress_callback=None) -> list[dict]:
             continue
 
         if pid not in patient_cache:
+            print(f"[worklist] Fetching patient {pid} ...")
             try:
                 patient_cache[pid] = cliniko.fetch_patient(pid)
-            except Exception:
+                print(f"[worklist] Got patient {pid}")
+            except Exception as ex:
+                print(f"[worklist] Patient {pid} fetch failed: {ex}")
                 patient_cache[pid] = {}
 
         patient = patient_cache[pid]
