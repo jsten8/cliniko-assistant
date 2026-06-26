@@ -711,6 +711,7 @@ function renderMockWorklist() {
     const badge = document.getElementById('wl-count-badge');
     if (data.status === 'ok') {
       state.worklist = data.entries;
+      document.getElementById('wl-status').textContent = '';
       renderWorklist(data.entries);
       badge.textContent = data.entries.filter(e => !e.sent).length + ' pending';
     } else {
