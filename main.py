@@ -2,6 +2,7 @@
 import subprocess
 import sys
 import threading
+import json
 from pathlib import Path
 
 APP_DIR = Path(__file__).parent
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     update_thread.join(timeout=30)  # Wait up to 30s for update check before launching
 
     import webview
-    from api import API
+    from api import API, _worklist_future
     from version import VERSION
 
     # Inject version directly into HTML at runtime so it shows instantly
@@ -41,6 +42,7 @@ if __name__ == "__main__":
     runtime_html = APP_DIR / "web" / "_runtime.html"
     runtime_html.write_text(html, encoding="utf-8")
     html_path = runtime_html
+
     window = webview.create_window(
         "Cliniko Assistant — Motion Ease Physiotherapy",
         url=str(html_path),
@@ -50,4 +52,20 @@ if __name__ == "__main__":
         min_size=(900, 600),
         background_color="#F2F0EB",
     )
+
+    def _push_worklist():
+        """Wait for preloaded worklist then push result to JS via evaluate_js.
+        This bypasses the pywebview API bridge entirely."""
+        import time, concurrent.futures
+        time.sleep(2)  # let the page finish loading
+        try:
+            entries = _worklist_future.result(timeout=43)
+            js = f"window.__pushWorklist({json.dumps(entries)});"
+        except concurrent.futures.TimeoutError:
+            js = "window.__pushWorklist(null, 'Cliniko took too long to respond (45s). Check your internet connection and click Refresh.');"
+        except Exception as e:
+            js = f"window.__pushWorklist(null, {json.dumps(str(e))});"
+        window.evaluate_js(js)
+
+    threading.Thread(target=_push_worklist, daemon=True).start()
     webview.start(debug=False)

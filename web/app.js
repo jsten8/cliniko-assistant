@@ -49,44 +49,13 @@ async function refreshWorklist() {
   const a = api();
   if (!a) { renderMockWorklist(); return; }
 
-  // Try reading from the pre-built cache file first (bypasses pywebview bridge)
-  // Falls back to API call if cache isn't ready yet
-  async function loadWorklist(days) {
-    try {
-      const resp = await fetch(`_worklist_cache.json?t=${Date.now()}`);
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.days === days) return data.entries;
-      }
-    } catch (_) {}
-    // Cache miss — call API directly
-    return await a.get_worklist(days);
-  }
-
-  const withTimeout = (promise, ms, label) =>
-    Promise.race([promise, new Promise((_, rej) => setTimeout(() => rej(new Error(`Timed out after ${ms/1000}s waiting for Cliniko. Check internet connection and click Refresh.`)), ms))]);
-
+  // On manual refresh: call API directly and use __pushWorklist to render
+  if (!a) { renderMockWorklist(); return; }
   try {
-    const entries = await withTimeout(loadWorklist(days), 15000, 'worklist');
-    state.worklist = entries;
-    renderWorklist(entries);
-    badge.textContent = entries.filter(e => !e.sent).length + ' pending';
-
-    // Update last-run display (non-blocking, best-effort)
-    if (a) a.get_last_run().then(lr => {
-      if (lr) {
-        const d = new Date(lr);
-        document.getElementById('last-run-label').textContent =
-          `Last run: ${d.toLocaleDateString('en-AU', { day:'2-digit', month:'short' })} ${d.toLocaleTimeString('en-AU', { hour:'2-digit', minute:'2-digit' })}`;
-      }
-      a.update_last_run().catch(() => {});
-    }).catch(() => {});
-
+    const entries = await a.get_worklist(days);
+    window.__pushWorklist(entries);
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" style="padding:24px 16px;">
-      <div class="error-banner" style="margin:0">Error loading worklist: ${err}</div>
-    </td></tr>`;
-    badge.textContent = 'error';
+    window.__pushWorklist(null, `Error: ${err}`);
   }
 }
 
@@ -729,8 +698,24 @@ function renderMockWorklist() {
   if (el && window.APP_VERSION) el.textContent = `v${window.APP_VERSION}`;
 })();
 
+// Python pushes worklist data directly via evaluate_js — bypasses pywebview bridge
+window.__pushWorklist = function(entries, error) {
+  const tbody = document.getElementById('wl-tbody');
+  const badge = document.getElementById('wl-count-badge');
+  if (error || !entries) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:24px 16px;">
+      <div class="error-banner" style="margin:0">${error || 'No results returned.'} <button class="btn btn-sm" onclick="refreshWorklist()" style="margin-left:8px;">Refresh</button></div>
+    </td></tr>`;
+    badge.textContent = 'error';
+    return;
+  }
+  state.worklist = entries;
+  renderWorklist(entries);
+  badge.textContent = entries.filter(e => !e.sent).length + ' pending';
+};
+
 window.addEventListener('pywebviewready', () => {
-  refreshWorklist();
+  // Worklist is pushed by Python via __pushWorklist — nothing to do here
 });
 
 // If no pywebview after 300ms, show mock data
